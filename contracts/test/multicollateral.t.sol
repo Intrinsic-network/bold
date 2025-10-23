@@ -68,10 +68,14 @@ contract MulticollateralTest is DevTestSetup {
 
         TestDeployer.TroveManagerParams[] memory troveManagerParamsArray =
             new TestDeployer.TroveManagerParams[](NUM_COLLATERALS);
+        // Branch 0: WETH (CCR=150%, MCR=110%)
         troveManagerParamsArray[0] = TestDeployer.TroveManagerParams(150e16, 110e16, 10e16, 110e16, 5e16, 10e16);
+        // Branch 1: wstETH (CCR=160%, MCR=120%)
         troveManagerParamsArray[1] = TestDeployer.TroveManagerParams(160e16, 120e16, 10e16, 120e16, 5e16, 10e16);
+        // Branch 2: rETH (CCR=160%, MCR=120%)
         troveManagerParamsArray[2] = TestDeployer.TroveManagerParams(160e16, 120e16, 10e16, 120e16, 5e16, 10e16);
-        troveManagerParamsArray[3] = TestDeployer.TroveManagerParams(160e16, 125e16, 10e16, 125e16, 5e16, 10e16);
+        // Branch 3: CBBTC (CCR=150%, MCR=110%, same as WETH)
+        troveManagerParamsArray[3] = TestDeployer.TroveManagerParams(150e16, 110e16, 10e16, 110e16, 5e16, 10e16);
 
         TestDeployer deployer = new TestDeployer();
         TestDeployer.LiquityContractsDev[] memory _contractsArray;
@@ -82,10 +86,10 @@ contract MulticollateralTest is DevTestSetup {
             contractsArray.push(_contractsArray[c]);
         }
         // Set price feeds
-        contractsArray[0].priceFeed.setPrice(2000e18);
-        contractsArray[1].priceFeed.setPrice(200e18);
-        contractsArray[2].priceFeed.setPrice(20000e18);
-        contractsArray[3].priceFeed.setPrice(2500e18);
+        contractsArray[0].priceFeed.setPrice(2000e18);   // WETH: $2,000
+        contractsArray[1].priceFeed.setPrice(2200e18);   // wstETH: $2,200
+        contractsArray[2].priceFeed.setPrice(2100e18);   // rETH: $2,100
+        contractsArray[3].priceFeed.setPrice(65000e18);  // CBBTC: $65,000 (typical BTC price)
         // Just in case
         for (uint256 c = 4; c < NUM_COLLATERALS; c++) {
             contractsArray[c].priceFeed.setPrice(2000e18 + c * 1e18);

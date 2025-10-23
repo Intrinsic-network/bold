@@ -28,6 +28,7 @@ import "src/StabilityPool.sol";
 import "src/PriceFeeds/WETHPriceFeed.sol";
 import "src/PriceFeeds/WSTETHPriceFeed.sol";
 import "src/PriceFeeds/RETHPriceFeed.sol";
+import "src/PriceFeeds/CBBTCPriceFeed.sol";
 import "src/CollateralRegistry.sol";
 import "test/TestContracts/PriceFeedTestnet.sol";
 import "test/TestContracts/MetadataDeployment.sol";
@@ -69,7 +70,7 @@ contract DeployLiquity2Script is DeployGovernance, UniPriceConverter, StdCheats,
     string constant DEPLOYMENT_MODE_BOLD_ONLY = "bold-only";
     string constant DEPLOYMENT_MODE_USE_EXISTING_BOLD = "use-existing-bold";
 
-    uint256 constant NUM_BRANCHES = 3;
+    uint256 constant NUM_BRANCHES = 4;
 
     address WETH_ADDRESS = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     address USDC_ADDRESS = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
@@ -80,12 +81,15 @@ contract DeployLiquity2Script is DeployGovernance, UniPriceConverter, StdCheats,
     IERC20Metadata USDC;
     address WSTETH_ADDRESS = 0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0;
     address RETH_ADDRESS = 0xae78736Cd615f374D3085123A210448E74Fc6393;
+    address CBBTC_ADDRESS = 0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf;
     address ETH_ORACLE_ADDRESS = 0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419;
     address RETH_ORACLE_ADDRESS = 0x536218f9E9Eb48863970252233c8F271f554C2d0;
     address STETH_ORACLE_ADDRESS = 0xCfE54B5cD566aB89272946F602D76Ea879CAb4a8;
+    address CBBTC_ORACLE_ADDRESS = 0x2665701293fCbEB223D11A08D826563EDcCE423A;
     uint256 ETH_USD_STALENESS_THRESHOLD = 24 hours;
     uint256 STETH_USD_STALENESS_THRESHOLD = 24 hours;
     uint256 RETH_ETH_STALENESS_THRESHOLD = 48 hours;
+    uint256 CBBTC_USD_STALENESS_THRESHOLD = 24 hours;
 
     // V1
     address LQTY_ADDRESS = 0x6DEA81C8171D0bA574754EF6F8b412F2Ed88c54D;
@@ -351,12 +355,24 @@ contract DeployLiquity2Script is DeployGovernance, UniPriceConverter, StdCheats,
         // rETH (same as wstETH)
         troveManagerParamsArray[2] = troveManagerParamsArray[1];
 
-        string[] memory collNames = new string[](2);
-        string[] memory collSymbols = new string[](2);
+        // CBBTC (same as WETH)
+        troveManagerParamsArray[3] = TroveManagerParams({
+            CCR: CCR_CBBTC,
+            MCR: MCR_CBBTC,
+            SCR: SCR_CBBTC,
+            BCR: BCR_ALL,
+            LIQUIDATION_PENALTY_SP: LIQUIDATION_PENALTY_SP_CBBTC,
+            LIQUIDATION_PENALTY_REDISTRIBUTION: LIQUIDATION_PENALTY_REDISTRIBUTION_CBBTC
+        });
+
+        string[] memory collNames = new string[](3);
+        string[] memory collSymbols = new string[](3);
         collNames[0] = "Wrapped liquid staked Ether 2.0";
         collSymbols[0] = "wstETH";
         collNames[1] = "Rocket Pool ETH";
         collSymbols[1] = "rETH";
+        collNames[2] = "Coinbase Wrapped BTC";
+        collSymbols[2] = "cbBTC";
 
         DeployGovernanceParams memory deployGovernanceParams = DeployGovernanceParams({
             epochStart: epochStart,
@@ -586,6 +602,9 @@ contract DeployLiquity2Script is DeployGovernance, UniPriceConverter, StdCheats,
 
             // RETH
             vars.collaterals[2] = IERC20Metadata(RETH_ADDRESS);
+
+            // CBBTC
+            vars.collaterals[3] = IERC20Metadata(CBBTC_ADDRESS);
         } else {
             // Sepolia
             // Use WETH as collateral for the first branch
@@ -804,15 +823,22 @@ contract DeployLiquity2Script is DeployGovernance, UniPriceConverter, StdCheats,
                     STETH_USD_STALENESS_THRESHOLD,
                     _borroweOperationsAddress
                 );
+            } else if (_collTokenAddress == RETH_ADDRESS) {
+                // RETH
+                return new RETHPriceFeed(
+                    ETH_ORACLE_ADDRESS,
+                    RETH_ORACLE_ADDRESS,
+                    RETH_ADDRESS,
+                    ETH_USD_STALENESS_THRESHOLD,
+                    RETH_ETH_STALENESS_THRESHOLD,
+                    _borroweOperationsAddress
+                );
             }
-            // RETH
-            assert(_collTokenAddress == RETH_ADDRESS);
-            return new RETHPriceFeed(
-                ETH_ORACLE_ADDRESS,
-                RETH_ORACLE_ADDRESS,
-                RETH_ADDRESS,
-                ETH_USD_STALENESS_THRESHOLD,
-                RETH_ETH_STALENESS_THRESHOLD,
+            // CBBTC
+            assert(_collTokenAddress == CBBTC_ADDRESS);
+            return new CBBTCPriceFeed(
+                CBBTC_ORACLE_ADDRESS,
+                CBBTC_USD_STALENESS_THRESHOLD,
                 _borroweOperationsAddress
             );
         }
